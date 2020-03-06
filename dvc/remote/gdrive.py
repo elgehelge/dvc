@@ -109,6 +109,21 @@ class RemoteGDrive(RemoteBASE):
         )
         self._client_id = config.get("gdrive_client_id")
         self._client_secret = config.get("gdrive_client_secret")
+        self._validate_config()
+        self._gdrive_user_credentials_path = (
+            tmp_fname(os.path.join(self.repo.tmp_dir, ""))
+            if os.getenv(RemoteGDrive.GDRIVE_USER_CREDENTIALS_DATA)
+            else config.get(
+                "gdrive_user_credentials_file",
+                os.path.join(
+                    self.repo.tmp_dir, self.DEFAULT_USER_CREDENTIALS_FILE
+                ),
+            )
+        )
+
+        self._list_params = None
+
+    def _validate_config(self):
         if self._use_service_account and (
             not self._service_account_email
             or not self._service_account_p12_file_path
@@ -131,18 +146,6 @@ class RemoteGDrive(RemoteBASE):
                 "secret in DVC config. Learn more at "
                 "{}.".format(format_link("https://man.dvc.org/remote/modify"))
             )
-        self._gdrive_user_credentials_path = (
-            tmp_fname(os.path.join(self.repo.tmp_dir, ""))
-            if os.getenv(RemoteGDrive.GDRIVE_USER_CREDENTIALS_DATA)
-            else config.get(
-                "gdrive_user_credentials_file",
-                os.path.join(
-                    self.repo.tmp_dir, self.DEFAULT_USER_CREDENTIALS_FILE
-                ),
-            )
-        )
-
-        self._list_params = None
 
     @wrap_prop(threading.RLock())
     @cached_property
