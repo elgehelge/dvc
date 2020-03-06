@@ -76,6 +76,10 @@ class RemoteGDrive(RemoteBASE):
     DEFAULT_NO_TRAVERSE = False
     DEFAULT_VERIFY = True
 
+    GDRIVE_SERVICE_ACCOUNT_EMAIL = "gdrive_service_account_email"
+    GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH = "gdrive_service_account_user_email"
+    GDRIVE_SERVICE_ACCOUNT_USER_EMAIL = "gdrive_service_account_p12_file_path"
+
     GDRIVE_USER_CREDENTIALS_DATA = "GDRIVE_USER_CREDENTIALS_DATA"
     DEFAULT_USER_CREDENTIALS_FILE = "gdrive-user-credentials.json"
 
@@ -93,13 +97,39 @@ class RemoteGDrive(RemoteBASE):
             )
 
         self._bucket = self.path_info.bucket
+        self._use_service_account = config.get("gdrive_use_service_account")
+        self._service_account_email = config.get(
+            self.GDRIVE_SERVICE_ACCOUNT_EMAIL
+        )
+        self._service_account_user_email = config.get(
+            self.GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH
+        )
+        self._service_account_p12_file_path = config.get(
+            self.GDRIVE_SERVICE_ACCOUNT_USER_EMAIL
+        )
         self._client_id = config.get("gdrive_client_id")
         self._client_secret = config.get("gdrive_client_secret")
-        if not self._client_id or not self._client_secret:
+        if self._use_service_account and (
+            not self._service_account_email
+            or not self._service_account_p12_file_path
+        ):
+            raise DvcException(
+                "To use service account please specify {}, {} and "
+                "{} (optional) in DVC config. Learn more at "
+                "{}.".format(
+                    self.GDRIVE_SERVICE_ACCOUNT_EMAIL,
+                    self.GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH,
+                    self.GDRIVE_SERVICE_ACCOUNT_USER_EMAIL,
+                    format_link("https://man.dvc.org/remote/modify"),
+                )
+            )
+        elif not self._use_service_account and (
+            not self._client_id or not self._client_secret
+        ):
             raise DvcException(
                 "Please specify Google Drive's client id and "
                 "secret in DVC config. Learn more at "
-                "{}.".format(format_link("https://man.dvc.org/remote/add"))
+                "{}.".format(format_link("https://man.dvc.org/remote/modify"))
             )
         self._gdrive_user_credentials_path = (
             tmp_fname(os.path.join(self.repo.tmp_dir, ""))
@@ -130,14 +160,21 @@ class RemoteGDrive(RemoteBASE):
                 )
 
         GoogleAuth.DEFAULT_SETTINGS["client_config_backend"] = "settings"
-        GoogleAuth.DEFAULT_SETTINGS["client_config"] = {
-            "client_id": self._client_id,
-            "client_secret": self._client_secret,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "revoke_uri": "https://oauth2.googleapis.com/revoke",
-            "redirect_uri": "",
-        }
+        if self._use_service_account:
+            GoogleAuth.DEFAULT_SETTINGS["service_config"] = {
+                "client_service_email": self._service_account_email,
+                "client_user_email": self._service_account_user_email,
+                "client_pkcs12_file_path": self._service_account_p12_file_path,
+            }
+        else:
+            GoogleAuth.DEFAULT_SETTINGS["client_config"] = {
+                "client_id": self._client_id,
+                "client_secret": self._client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "revoke_uri": "https://oauth2.googleapis.com/revoke",
+                "redirect_uri": "",
+            }
         GoogleAuth.DEFAULT_SETTINGS["save_credentials"] = True
         GoogleAuth.DEFAULT_SETTINGS["save_credentials_backend"] = "file"
         GoogleAuth.DEFAULT_SETTINGS[
@@ -153,7 +190,10 @@ class RemoteGDrive(RemoteBASE):
         gauth = GoogleAuth(settings_file="")
 
         try:
-            gauth.CommandLineAuth()
+            if self._use_service_account:
+                gauth.ServiceAuth()
+            else:
+                gauth.CommandLineAuth()
         except RefreshError as exc:
             raise GDriveAccessTokenRefreshError from exc
         except KeyError as exc:
