@@ -124,6 +124,7 @@ class RemoteGDrive(RemoteBASE):
         self._list_params = None
 
     def _validate_config(self):
+        # Validate Service Account configuration
         if self._use_service_account and (
             not self._service_account_email
             or not self._service_account_p12_file_path
@@ -138,7 +139,9 @@ class RemoteGDrive(RemoteBASE):
                     format_link("https://man.dvc.org/remote/modify"),
                 )
             )
-        elif not self._use_service_account and (
+
+        # Validate OAuth 2.0 Client ID configuration
+        if not self._use_service_account and (
             not self._client_id or not self._client_secret
         ):
             raise DvcException(
