@@ -76,10 +76,6 @@ class RemoteGDrive(RemoteBASE):
     DEFAULT_NO_TRAVERSE = False
     DEFAULT_VERIFY = True
 
-    GDRIVE_SERVICE_ACCOUNT_EMAIL = "gdrive_service_account_email"
-    GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH = "gdrive_service_account_user_email"
-    GDRIVE_SERVICE_ACCOUNT_USER_EMAIL = "gdrive_service_account_p12_file_path"
-
     GDRIVE_USER_CREDENTIALS_DATA = "GDRIVE_USER_CREDENTIALS_DATA"
     DEFAULT_USER_CREDENTIALS_FILE = "gdrive-user-credentials.json"
 
@@ -99,13 +95,13 @@ class RemoteGDrive(RemoteBASE):
         self._bucket = self.path_info.bucket
         self._use_service_account = config.get("gdrive_use_service_account")
         self._service_account_email = config.get(
-            self.GDRIVE_SERVICE_ACCOUNT_EMAIL
+            "gdrive_service_account_email"
         )
         self._service_account_user_email = config.get(
-            self.GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH
+            "gdrive_service_account_user_email"
         )
         self._service_account_p12_file_path = config.get(
-            self.GDRIVE_SERVICE_ACCOUNT_USER_EMAIL
+            "gdrive_service_account_p12_file_path"
         )
         self._client_id = config.get("gdrive_client_id")
         self._client_secret = config.get("gdrive_client_secret")
@@ -131,11 +127,11 @@ class RemoteGDrive(RemoteBASE):
         ):
             raise DvcException(
                 "To use service account please specify {}, {} and "
-                "{} (optional) in DVC config. Learn more at "
+                "{} in DVC config. Learn more at "
                 "{}.".format(
-                    self.GDRIVE_SERVICE_ACCOUNT_EMAIL,
-                    self.GDRIVE_SERVICE_ACCOUNT_P12_FILE_PATH,
-                    self.GDRIVE_SERVICE_ACCOUNT_USER_EMAIL,
+                    "gdrive_service_account_email",
+                    "gdrive_service_account_p12_file_path",
+                    "gdrive_service_account_user_email (optional)",
                     format_link("https://man.dvc.org/remote/modify"),
                 )
             )
